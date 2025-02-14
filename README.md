@@ -1,140 +1,149 @@
 # webscrapingMELI
 
-## Introdução
-Este código realiza a coleta e análise de produtos relacionados à busca por "Jaleco" na API do Mercado Livre. Ele coleta até 1000 produtos, extrai informações relevantes e salva os dados em um arquivo JSON e, opcionalmente, em um arquivo Excel.
+
+Este projeto realiza a coleta e análise de produtos relacionados a uma busca específica (por exemplo, "Jaleco") na API do Mercado Livre. Ele coleta até 1000 produtos, extrai informações relevantes e salva os dados em arquivos JSON e Excel para análise posterior.
+
+---
+
+## Sumário
+
+1. [Visão Geral](#visão-geral)
+2. [Funcionalidades](#funcionalidades)
+3. [Requisitos](#requisitos)
+4. [Instalação](#instalação)
+5. [Uso](#uso)
+6. [Estrutura do Código](#estrutura-do-código)
+7. [Exemplos de Saída](#exemplos-de-saída)
+8. [Arquivos Gerados](#arquivos-gerados)
+9. [Contribuição](#contribuição)
+
+---
+
+## Visão Geral
+
+O projeto utiliza a API do Mercado Livre para coletar dados de produtos com base em uma palavra-chave de busca. Os dados coletados são processados e organizados em três DataFrames:
+
+1. **Anúncios**: Contém informações sobre os produtos, como título, preço, condição, etc.
+2. **Vendedores**: Contém informações sobre os vendedores, como ID e apelido.
+3. **Categorias**: Contém informações sobre as categorias dos produtos, como nome e caminho hierárquico.
+
+Os dados são salvos em arquivos JSON e Excel para facilitar a análise e o compartilhamento.
+
+---
+
+## Funcionalidades
+
+- Coleta de até 1000 produtos da API do Mercado Livre.
+- Extração de informações detalhadas sobre produtos, vendedores e categorias.
+- Salvamento dos dados em arquivos JSON e Excel.
+- Separação dos dados em DataFrames para facilitar a análise.
 
 ---
 
 ## Requisitos
+
 - **Python 3.x**
 - Bibliotecas necessárias:
   - `requests`: Para fazer requisições HTTP à API do Mercado Livre.
   - `pandas`: Para manipulação e análise de dados.
   - `json`: Para manipulação de arquivos JSON.
 
-Instale as bibliotecas com o seguinte comando:
-```bash
-pip install requests pandas
-```
+---
+
+## Instalação
+
+4. Clone o repositório:
+   ```bash
+   git clone https://github.com/seu-usuario/analise-mercado-livre.git
+   cd analise-mercado-livre
+   ```
+
+5. Instale as dependências:
+   ```bash
+   pip install requests pandas
+   ```
+
+---
+
+## Uso
+
+6. Execute o script Python:
+   ```bash
+   python analise_meli.py
+   ```
+
+7. O script coletará os dados da API do Mercado Livre e salvará os resultados em:
+   - Um arquivo JSON (`meli_Jaleco.json`) com todos os produtos coletados.
+   - Três arquivos Excel:
+     - `meli_Jaleco_anuncios.xlsx`: Contém os anúncios.
+     - `meli_Jaleco_sellers.xlsx`: Contém os vendedores.
+     - `meli_Jaleco_categories.xlsx`: Contém as categorias.
+
+8. Analise os arquivos gerados ou integre-os ao seu fluxo de trabalho.
 
 ---
 
 ## Estrutura do Código
 
-### 1. Importação de Bibliotecas
-```python
-import requests
-import json
-import pandas as pd
-```
+O código está organizado nas seguintes etapas:
 
-### 2. Definições da Busca
-- A busca é realizada por meio da API do Mercado Livre, utilizando a palavra-chave "Jaleco".
-- A URL base é configurada para o site do Mercado Livre Brasil (MLB).
+9. **Coleta de Dados**:
+   - Faz requisições paginadas à API do Mercado Livre.
+   - Coleta até 1000 produtos com base na palavra-chave fornecida.
 
-```python
-query = "Jaleco"
-base_url = f"https://api.mercadolibre.com/sites/MLB/search?q={query}"
-```
+10. **Processamento dos Dados**:
+   - Extrai informações relevantes dos produtos, vendedores e categorias.
+   - Remove duplicações de vendedores e categorias.
 
-### 3. Coleta de Produtos
-- O código faz requisições paginadas à API, coletando até 1000 produtos.
-- Os produtos são armazenados em uma lista (`all_products`) e salvos em um arquivo JSON.
-
-```python
-all_products = []
-offset = 0
-limit = 50  # A API retorna no máximo 50 produtos por requisição
-max_results = 1000  # Limite máximo de produtos que podem ser coletados
-
-while offset < max_results:
-    url = f"{base_url}&offset={offset}&limit={limit}"
-    response = requests.get(url)
-    data = response.json()
-    products = data.get("results", [])
-    if not products:
-        break
-    all_products.extend(products)
-    print(f"Coletados {len(all_products)} produtos...")
-    offset += limit
-
-# Salvar os produtos em um arquivo JSON
-file_name = f"meli_{query}.json"
-with open(file_name, "w", encoding="utf-8") as file:
-    json.dump(all_products, file, indent=4, ensure_ascii=False)
-
-print(f"Finalizado! Total de produtos coletados: {len(all_products)}")
-```
-
-### 4. Processamento dos Dados
-- Os dados coletados são carregados do arquivo JSON.
-- Informações relevantes de cada produto são extraídas e armazenadas em um DataFrame.
-
-```python
-with open(file_name, "r", encoding="utf-8") as file:
-    data = json.load(file)
-
-processed_data = []
-
-for product in data:
-    row = {
-        "id": product.get("id"),
-        "title": product.get("title"),
-        "condition": product.get("condition"),
-        "listing_type_id": product.get("listing_type_id"),
-        "permalink": product.get("permalink"),
-        "category_id": product.get("category_id"),
-        "domain_id": product.get("domain_id"),
-        "thumbnail": product.get("thumbnail"),
-        "order_backend": product.get("order_backend"),
-        "price": product.get("price"),
-        "original_price": product.get("original_price"),
-        "type": product.get("sale_price", {}).get("type"),
-        "available_quantity": product.get("available_quantity"),
-        "free_shipping": product.get("shipping", {}).get("free_shipping"),
-        "logistic_type": product.get("shipping", {}).get("logistic_type"),
-        "seller_id": product.get("seller", {}).get("id"),
-        "seller_nickname": product.get("seller", {}).get("nickname"),
-        "state_id": product.get("address", {}).get("state_id"),
-        "state_name": product.get("address", {}).get("state_name"),
-        "city_name": product.get("address", {}).get("city_name")
-    }
-    processed_data.append(row)
-
-df = pd.DataFrame(processed_data)
-print(df.head())
-```
-
-### 5. Salvamento dos Dados (Opcional)
-- O DataFrame pode ser salvo em um arquivo Excel para análise posterior.
-
-```python
-df.to_excel(f"meli_{query}.xlsx", index=False)
-```
+11. **Salvamento dos Dados**:
+   - Salva os dados processados em arquivos JSON e Excel.
 
 ---
 
-## Execução
-1. Execute o código em um ambiente Python com as bibliotecas necessárias instaladas.
-2. O código coletará os dados da API do Mercado Livre e salvará os resultados em um arquivo JSON (`meli_Jaleco.json`).
-3. Os dados serão processados e exibidos em um DataFrame.
-4. Opcionalmente, os dados podem ser salvos em um arquivo Excel (`meli_Jaleco.xlsx`).
+## Exemplos de Saída
+
+### DataFrame de Anúncios (`df_anuncios`):
+| id           | title                                      | condition | seller_id | category_id | ... |
+|--------------|--------------------------------------------|-----------|-----------|-------------|-----|
+| MLB2087266827| Jaleco C/ziper Feminino Colorido Acinturado| new       | 541300869 | MLB277428   | ... |
+
+### DataFrame de Vendedores (`df_sellers`):
+| seller_id | seller_nickname |
+|-----------|-----------------|
+| 541300869 | MUNDODOJALECO   |
+
+### DataFrame de Categorias (`df_categories`):
+| category_id | category_name       | category_path                     |
+|-------------|---------------------|-----------------------------------|
+| MLB277428   | Jalecos             | Moda > Roupas > Jalecos           |
 
 ---
 
-## Exemplo de Saída
-O DataFrame gerado contém as seguintes colunas:
-- `id`: ID do produto.
-- `title`: Título do produto.
-- `condition`: Condição do produto (novo, usado, etc.).
-- `price`: Preço do produto.
-- `available_quantity`: Quantidade disponível.
-- `free_shipping`: Indica se o frete é grátis.
-- `seller_nickname`: Apelido do vendedor.
-- `state_name`: Estado do vendedor.
-- `city_name`: Cidade do vendedor.
+## Arquivos Gerados
+
+- **`meli_Jaleco.json`**: Contém todos os produtos coletados da API, com todos os atributos disponíveis.
+- **`meli_Jaleco_anuncios.xlsx`**: Contém os anúncios processados.
+- **`meli_Jaleco_sellers.xlsx`**: Contém os vendedores processados.
+- **`meli_Jaleco_categories.xlsx`**: Contém as categorias processadas.
 
 ---
 
 ## Contribuição
-Se você encontrar problemas ou tiver sugestões de melhoria, sinta-se à vontade para contribuir.
+
+Contribuições são bem-vindas! Siga os passos abaixo:
+
+12. Faça um fork do projeto.
+13. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`).
+14. Commit suas mudanças (`git commit -m 'Adicionando nova feature'`).
+15. Push para a branch (`git push origin feature/nova-feature`).
+16. Abra um Pull Request.
+
+---
+
+## Contato
+
+Se tiver dúvidas ou sugestões, entre em contato:
+
+- **Nome**: Paulo Neto
+- **Email**: pn.oliveira36@hotmail.com
+- **GitHub**: https://github.com/pauloneto3
