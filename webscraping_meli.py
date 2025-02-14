@@ -48,12 +48,19 @@ print("Processando os dados coletados...")
 with open(file_name_json, "r", encoding="utf-8") as file:
     data = json.load(file)
 
-# Criar uma lista para armazenar os dados tratados
-processed_data = []
+# Listas para armazenar dados processados
+processed_anuncios = []
+processed_sellers = []
+processed_categories = []
+
+# Dicionários para evitar duplicação de sellers e categories
+unique_sellers = {}
+unique_categories = {}
 
 # Percorrer os produtos e extrair informações
 for product in data:
-    row = {
+    # Informações do anúncio
+    anuncio = {
         "id": product.get("id"),
         "title": product.get("title"),
         "condition": product.get("condition"),
@@ -69,24 +76,63 @@ for product in data:
         "available_quantity": product.get("available_quantity"),
         "free_shipping": product.get("shipping", {}).get("free_shipping"),
         "logistic_type": product.get("shipping", {}).get("logistic_type"),
-        "seller_id": product.get("seller", {}).get("id"),
-        "seller_nickname": product.get("seller", {}).get("nickname"),
+        "seller_id": product.get("seller", {}).get("id"),  # Apenas o ID do seller
         "state_id": product.get("address", {}).get("state_id"),
         "state_name": product.get("address", {}).get("state_name"),
         "city_name": product.get("address", {}).get("city_name")
     }
-    processed_data.append(row)
+    processed_anuncios.append(anuncio)
 
-# Criar DataFrame
-df = pd.DataFrame(processed_data)
+    # Informações do seller (se não foi adicionado antes)
+    seller = product.get("seller", {})
+    seller_id = seller.get("id")
+    if seller_id and seller_id not in unique_sellers:
+        unique_sellers[seller_id] = {
+            "seller_id": seller_id,
+            "seller_nickname": seller.get("nickname")
+        }
 
-# Exibir as primeiras linhas
+    # Informações da categoria (se não foi adicionada antes)
+    category_id = product.get("category_id")
+    if category_id and category_id not in unique_categories:
+        # Faz uma requisição à API para obter detalhes da categoria
+        category_url = f"https://api.mercadolibre.com/categories/{category_id}"
+        category_response = requests.get(category_url)
+        if category_response.status_code == 200:
+            category_data = category_response.json()
+            unique_categories[category_id] = {
+                "category_id": category_id,
+                "category_name": category_data.get("name"),
+                "category_path": " > ".join([x["name"] for x in category_data.get("path_from_root", [])])
+            }
+
+# Criar DataFrames
+df_anuncios = pd.DataFrame(processed_anuncios)
+df_sellers = pd.DataFrame(list(unique_sellers.values()))
+df_categories = pd.DataFrame(list(unique_categories.values()))
+
+# Exibir as primeiras linhas de cada DataFrame
 print("\nExemplo dos dados processados:")
-print(df.head())
+print("\nDataFrame de Anúncios:")
+print(df_anuncios.head())
 
-# Salvar o DataFrame em um arquivo Excel
-file_name_excel = f"meli_{query}.xlsx"
-df.to_excel(file_name_excel, index=False)
+print("\nDataFrame de Vendedores:")
+print(df_sellers.head())
 
-print(f"Dados processados salvos em: {file_name_excel}")
+print("\nDataFrame de Categorias:")
+print(df_categories.head())
+
+# Salvar os DataFrames em arquivos Excel
+file_name_excel_anuncios = f"meli_{query}_anuncios.xlsx"
+file_name_excel_sellers = f"meli_{query}_sellers.xlsx"
+file_name_excel_categories = f"meli_{query}_categories.xlsx"
+
+df_anuncios.to_excel(file_name_excel_anuncios, index=False)
+df_sellers.to_excel(file_name_excel_sellers, index=False)
+df_categories.to_excel(file_name_excel_categories, index=False)
+
+print(f"\nDados processados salvos em:")
+print(f"- Anúncios: {file_name_excel_anuncios}")
+print(f"- Vendedores: {file_name_excel_sellers}")
+print(f"- Categorias: {file_name_excel_categories}")
 print("Processamento concluído!")
